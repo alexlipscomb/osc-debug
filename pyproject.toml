@@ -1,0 +1,16 @@
+[tool.pdm]
+
+[project]
+name = ""
+version = ""
+description = ""
+authors = [
+    {name = "Alex Lipscomb", email = "johnalipscomb@gmail.com"},
+]
+dependencies = [
+    "python-osc>=1.8.1",
+    "cmd2>=2.4.3",
+    "keyboard>=0.13.5",
+]
+requires-python = ">=3.9"
+license = {text = "MIT"}
