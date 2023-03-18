@@ -37,21 +37,21 @@ class Repl(Cmd):
         """
         args = statement.arg_list
         if len(args) < 1:
-            print(self.__port)
+            self.poutput(self.__port)
             return
 
         try:
             port = int(args[0])
             if port < self.__port_range[0] or port > self.__port_range[1]:
-                print(
+                self.poutput(
                     f"Invalid port. Use a port in the range {self.__format_port_range()}"
                 )
                 return
 
             self.__port = port
-            print(f"Set port to {port}")
+            self.poutput(f"Set port to {port}")
         except ValueError:
-            print(
+            self.poutput(
                 f"Ports can only be a nonnegative integer between {self.__format_port_range()}"
             )
 
@@ -63,13 +63,13 @@ class Repl(Cmd):
         """
         args = statement.arg_list
         if len(args) < 1:
-            print(self.__host)
+            self.poutput(self.__host)
             return
 
         try:
             host = args[0]
             self.__host = host
-            print(f"Set host to {host}")
+            self.poutput(f"Set host to {host}")
         finally:
             ...
 
@@ -79,66 +79,74 @@ class Repl(Cmd):
 
         Usage: QUIT
         """
-        print(self.__exit_message)
+        self.poutput(self.__exit_message)
         return True
 
-    def do_server(self, statement: Statement):
-        """
-        Listen for OSC messages
+    def do_add(self, statement: Statement):
+        """Add an OSC address to the server
 
-        Usage: SERVER [SERVE|ADD|REMOVE|LIST]
+        Usage: ADD [...addresses]
         """
-
         args = statement.arg_list
         args_len = len(args)
+
         if args_len < 1:
-            print(
-                f"Incorrect number of arguments.\n\nUsage: SERVER [SERVE|ADD|REMOVE|LIST]"
-            )
+            self.poutput("Invalid number of arguments.\n\nUsage: ADD [...addresses]")
             return
 
-        command = args[0].upper()
-        if command == "SERVE":
-            self.__start_server()
-        elif command == "ADD":
-            if args_len < 2:
-                print(
-                    "Invalid number of arguments.\n\nUsage: SERVER ADD [...addresses]"
-                )
+        self.__add_dispatcher_address(args)
+
+    def do_remove(self, statement: Statement):
+        """Remove an OSC address from the server
+
+        Usage: REMOVE [...addresses]
+        """
+        args = statement.arg_list
+        args_len = len(args)
+
+        if args_len < 1:
+            try:
+                if (
+                    input(
+                        "Are you sure you want to remove all addresses? (Y/n) "
+                    ).lower()
+                    == "y"
+                ):
+                    self.__remove_all_dispatcher_addresses()
+
+            except EOFError:
                 return
 
-            addresses = args[1:]
-            self.__add_dispatcher_address(addresses)
-        elif command == "REMOVE":
-            if args_len < 2:
-                try:
-                    if (
-                        input(
-                            "Are you sure you want to remove all addresses? (Y/n) "
-                        ).lower()
-                        == "y"
-                    ):
-                        self.__remove_all_dispatcher_addresses()
+            self.__remove_dispatcher_address(args)
 
-                except EOFError:
-                    return
+    def do_listen(self, _):
+        """
+        Start the OSC server
 
-            addresses = args[1:]
-            self.__remove_dispatcher_address(addresses)
-        elif command == "LIST":
-            if len(self.__dispatcher._map) == 0:
-                self.poutput("No handlers exist. Use SERVER ADD to add one")
-                return
+        Usage: LISTEN
+        """
+        self.__start_server()
 
-            for address in self.__dispatcher._map:
-                self.poutput(address)
+    def do_list(self, _):
+        """
+        List all OSC addresses
+
+        Usage: LIST
+        """
+
+        if len(self.__dispatcher._map) == 0:
+            self.poutput("No handlers exist. Use ADD to add one")
+            return
+
+        for address in self.__dispatcher._map:
+            self.poutput(address)
 
     def __start_server(self):
         try:
             self.poutput(f"Starting server on {self.__format_server_info()}")
             self.__server.serve_forever()
         except KeyboardInterrupt:
-            print("\nStopping server...")
+            self.poutput("\nStopping server...")
             self.__server.shutdown()
 
     def __add_dispatcher_address(self, addresses: Union[str, List[str]]):
@@ -169,13 +177,13 @@ class Repl(Cmd):
         """
         args = statement.arg_list
         if len(args) < 2:
-            print("Invalid number of arguments.\n\nUsage: SEND [address] [...messages]")
+            self.poutput(
+                "Invalid number of arguments.\n\nUsage: SEND [address] [...messages]"
+            )
             return
 
         address = args[0]
         messages = args[1:]
-        print(address)
-        print(messages)
 
         client = SimpleUDPClient(self.__host, self.__port)
 
